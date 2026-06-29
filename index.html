@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>СобакПоиск</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        @font-face {
+            font-family: 'Barboskin';
+            src: url('barboskinsakzident.otf') format('opentype');
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #e3f2fb;
+            min-height: 100vh;
+            font-family: 'Barboskin', Arial, sans-serif;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 20px 30px 0 30px;
+            gap: 30px;
+        }
+        .logo {
+            display: block;
+            max-width: 200px;
+            height: auto;
+            flex-shrink: 0;
+        }
+        .search-wrapper {
+            flex: 1;
+            background-color: #e3f2fb;
+            padding: 4px 0;
+        }
+        .search-form {
+            display: flex;
+            width: 100%;
+            border-radius: 40px;
+            overflow: hidden;
+            background-color: #fff;
+            border: 2px solid #f48936;
+        }
+        .search-input {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            outline: none;
+            font-size: 18px;
+            background-color: #e3f2fb;
+            color: #1a2a3a;
+            font-family: 'Barboskin', Arial, sans-serif;
+        }
+        .search-input::placeholder {
+            color: #6a7b8a;
+            opacity: 0.7;
+        }
+        .search-btn {
+            padding: 14px 28px;
+            background-color: #f48936;
+            color: #fff;
+            border: none;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            font-family: 'Barboskin', Arial, sans-serif;
+        }
+        .search-btn:hover {
+            background-color: #e0782a;
+        }
+        .main-content {
+            padding: 40px 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            font-size: 32px;
+            color: #4a5a6a;
+            opacity: 0.7;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+        .film-card {
+            display: flex;
+            background: white;
+            overflow: hidden;
+            border: 1px solid rgba(244, 137, 54, 0.2);
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+        .film-poster {
+            width: 200px;
+            min-height: 280px;
+            flex-shrink: 0;
+            background: #d5e6f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #6a7b8a;
+            overflow: hidden;
+        }
+        .film-poster img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .film-info {
+            padding: 20px 25px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex: 1;
+        }
+        .film-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a2a3a;
+            margin-bottom: 5px;
+            font-family: 'Barboskin', Arial, sans-serif;
+        }
+        .film-rating {
+            font-size: 20px;
+            color: #f48936;
+            font-weight: 700;
+            margin-bottom: 10px;
+            font-family: 'Barboskin', Arial, sans-serif;
+        }
+        .film-description {
+            font-size: 16px;
+            color: #4a5a6a;
+            line-height: 1.6;
+            font-family: 'Barboskin', Arial, sans-serif;
+        }
+        @media (max-width: 600px) {
+            .header {
+                flex-wrap: wrap;
+                padding: 15px 15px 0 15px;
+                gap: 15px;
+            }
+            .logo {
+                max-width: 150px;
+            }
+            .search-btn {
+                padding: 12px 18px;
+                font-size: 16px;
+            }
+            .search-input {
+                padding: 12px 16px;
+                font-size: 16px;
+            }
+            .film-card {
+                flex-direction: column;
+            }
+            .film-poster {
+                width: 100%;
+                min-height: 200px;
+                max-height: 300px;
+            }
+            .film-title {
+                font-size: 22px;
+            }
+            .film-rating {
+                font-size: 18px;
+            }
+            .empty-state {
+                font-size: 24px;
+                padding: 50px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <img class="logo" src="sobakpoisk.svg" alt="Логотип">
+        <div class="search-wrapper">
+            <form class="search-form" id="searchForm">
+                <input class="search-input" id="searchInput" type="text" placeholder="Поиск фильмов..." aria-label="Поиск">
+                <button class="search-btn" type="submit">Найти</button>
+            </form>
+        </div>
+    </header>
+    <main class="main-content" id="mainContent">
+        <div class="empty-state" id="emptyState">Начните поиск...</div>
+        <div class="results-grid" id="resultsGrid" style="display:none;"></div>
+    </main>
+    <script>
+        let allFilms = [];
+
+        function loadFilms() {
+            fetch('films.txt')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Файл films.txt не найден');
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    const lines = data.split('\n').filter(line => line.trim() !== '');
+                    allFilms = [];
+                    for (let i = 0; i < lines.length; i += 5) {
+                        if (i + 4 < lines.length) {
+                            allFilms.push({
+                                title: lines[i].trim(),
+                                description: lines[i+1].trim(),
+                                image: lines[i+2].trim(),
+                                link: lines[i+3].trim(),
+                                rating: lines[i+4].trim()
+                            });
+                        }
+                    }
+                    renderResults('');
+                })
+                .catch(err => {
+                    console.warn('Ошибка загрузки films.txt:', err);
+                    allFilms = [];
+                    renderResults('');
+                });
+        }
+
+        function renderResults(query) {
+            const emptyState = document.getElementById('emptyState');
+            const resultsGrid = document.getElementById('resultsGrid');
+            
+            if (!allFilms || allFilms.length === 0) {
+                emptyState.style.display = 'block';
+                resultsGrid.style.display = 'none';
+                emptyState.textContent = 'Начните поиск...';
+                return;
+            }
+
+            const filtered = query.trim() === '' ? allFilms : allFilms.filter(f => 
+                f.title.toLowerCase().includes(query.toLowerCase()) ||
+                f.description.toLowerCase().includes(query.toLowerCase())
+            );
+
+            if (query.trim() === '') {
+                emptyState.style.display = 'block';
+                resultsGrid.style.display = 'none';
+                emptyState.textContent = 'Начните поиск...';
+                return;
+            }
+
+            if (filtered.length === 0) {
+                emptyState.style.display = 'block';
+                resultsGrid.style.display = 'none';
+                emptyState.textContent = 'Ничего не найдено. Попробуйте другой запрос.';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            resultsGrid.style.display = 'grid';
+            resultsGrid.innerHTML = filtered.map(film => `
+                <a href="${film.link}" class="film-card" target="_blank">
+                    <div class="film-poster">
+                        ${film.image && film.image !== '' ? 
+                            `<img src="${film.image}" alt="${film.title}" onerror="this.parentElement.innerHTML='Нет изображения'">` : 
+                            'Нет изображения'
+                        }
+                    </div>
+                    <div class="film-info">
+                        <div class="film-title">${film.title}</div>
+                        <div class="film-rating">⭐ ${film.rating}/10</div>
+                        <div class="film-description">${film.description}</div>
+                    </div>
+                </a>
+            `).join('');
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const query = document.getElementById('searchInput').value;
+            renderResults(query);
+        });
+
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const query = this.value;
+            if (query === '') {
+                const emptyState = document.getElementById('emptyState');
+                const resultsGrid = document.getElementById('resultsGrid');
+                emptyState.style.display = 'block';
+                resultsGrid.style.display = 'none';
+                emptyState.textContent = 'Начните поиск...';
+            } else {
+                renderResults(query);
+            }
+        });
+
+        loadFilms();
+    </script>
+</body>
+</html>
